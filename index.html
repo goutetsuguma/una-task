@@ -2,476 +2,600 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyNote — タスク管理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>una-task</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --sidebar-bg: #1a1a2e;
-    --sidebar-hover: #16213e;
-    --sidebar-active: #0f3460;
-    --sidebar-text: #c8ccd4;
-    --sidebar-accent: #e94560;
-    --sidebar-width: 220px;
-    --list-width: 280px;
-    --accent-private: #e94560;
-    --accent-work: #4fc3f7;
-    --accent-gakudo: #ff9a3c;
-    --accent-takkyuu: #a8e6cf;
-    --accent-vector: #4fc3f7;
-    --bg: #f4f5f7;
-    --surface: #ffffff;
-    --text: #1a1a2e;
-    --text-muted: #7a7f8e;
-    --border: #e8eaed;
-    --tag-bg: #eef0f5;
-  }
+:root {
+  --sidebar-bg: #1a1a2e;
+  --sidebar-hover: #16213e;
+  --sidebar-active: #0f3460;
+  --sidebar-text: #c8ccd4;
+  --sidebar-accent: #e94560;
+  --accent-gakudo: #ff9a3c;
+  --accent-takkyuu: #52b788;
+  --accent-vector: #4fc3f7;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #7a7f8e;
+  --border: #e8eaed;
+}
 
-  body {
-    font-family: 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
 
-  /* ── サイドバー ── */
+/* ===== レイアウト ===== */
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* サイドバー（PC: 常時表示 / スマホ: オーバーレイ） */
+#sidebar {
+  width: 220px;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform 0.25s ease;
+}
+
+#notelist {
+  width: 280px;
+  background: #fff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* オーバーレイ（スマホ用） */
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 99;
+}
+
+/* ===== サイドバー ===== */
+.sidebar-logo {
+  padding: 20px 16px 16px;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-logo .logo-text span { color: var(--sidebar-accent); }
+.sidebar-close {
+  display: none;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(200,204,212,0.4);
+  text-transform: uppercase;
+  padding: 20px 16px 6px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  color: var(--sidebar-text);
+  font-size: 14px;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+.sidebar-item:hover { background: var(--sidebar-hover); }
+.sidebar-item.active {
+  background: var(--sidebar-active);
+  border-left-color: var(--sidebar-accent);
+  color: #fff;
+}
+.sidebar-item .dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sidebar-item .count {
+  margin-left: auto;
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  color: var(--sidebar-text);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+/* ===== ノート一覧 ===== */
+.notelist-header {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.notelist-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.notelist-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.btn-new {
+  background: var(--sidebar-accent);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-new:hover { opacity: 0.85; }
+
+.note-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.note-search input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-appearance: none;
+}
+.note-search input:focus { border-color: var(--sidebar-active); }
+
+#note-items { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+
+.note-item {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.note-item:hover { background: #f9f9fb; }
+.note-item.active { background: #eef3fb; }
+.note-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.note-item-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.05em;
+}
+.note-item-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item-date { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.task-progress { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.progress-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+/* ===== エディタ ===== */
+.editor-toolbar {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  flex-shrink: 0;
+}
+.editor-back-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.editor-notebook-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.editor-title-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  min-width: 0;
+}
+.editor-title-input::placeholder { color: #ccc; }
+.btn-delete {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-delete:hover { border-color: var(--sidebar-accent); color: var(--sidebar-accent); }
+
+#editor-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--bg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.editor-section {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+.editor-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+#note-content {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text);
+  resize: none;
+  min-height: 100px;
+  background: transparent;
+  -webkit-appearance: none;
+}
+
+.task-list { list-style: none; }
+.task-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f0f1f3;
+}
+.task-list li:last-child { border-bottom: none; }
+.task-check {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.task-check.done { background: #4caf50; border-color: #4caf50; }
+.task-check.done::after { content: '✓'; color: #fff; font-size: 12px; }
+.task-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+  border: none;
+  outline: none;
+  font-family: inherit;
+  background: transparent;
+  padding: 2px 0;
+  min-width: 0;
+}
+.task-text.done-text { text-decoration: line-through; color: var(--text-muted); }
+.task-due {
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #eef0f5;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.task-due.overdue { color: #e94560; background: #fdeef1; }
+.task-delete-btn {
+  background: none;
+  border: none;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.task-delete-btn:hover { color: var(--sidebar-accent); }
+
+.add-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 0;
+  border-top: 1px solid #f0f1f3;
+  margin-top: 4px;
+}
+.add-task-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  -webkit-appearance: none;
+}
+.add-task-input::placeholder { color: #ccc; }
+.btn-add-task {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #ccc;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s;
+  padding: 0 4px;
+}
+.btn-add-task:hover { color: var(--sidebar-accent); }
+
+/* 空状態 */
+#empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: var(--bg);
+}
+#empty-state .big { font-size: 48px; }
+
+/* タグカラー */
+.tag-gakudo  { background: #fff3e0; color: #bf6000; }
+.tag-takkyuu { background: #e8f5e9; color: #2e7d32; }
+.tag-vector  { background: #e1f5fe; color: #0277bd; }
+
+/* ===== スマホ対応 ===== */
+@media (max-width: 768px) {
   #sidebar {
-    width: var(--sidebar-width);
-    background: var(--sidebar-bg);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    transform: translateX(-100%);
+    width: 260px;
   }
+  #sidebar.open {
+    transform: translateX(0);
+  }
+  #overlay.show { display: block; }
+  .sidebar-close { display: block; }
+  .notelist-menu-btn { display: block; }
 
-  .sidebar-logo {
-    padding: 20px 16px 16px;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .sidebar-logo span { color: var(--sidebar-accent); }
-
-  .sidebar-section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: rgba(200,204,212,0.4);
-    text-transform: uppercase;
-    padding: 20px 16px 6px;
-  }
-
-  .sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 16px;
-    cursor: pointer;
-    color: var(--sidebar-text);
-    font-size: 13.5px;
-    border-radius: 0;
-    transition: background 0.15s;
-    border-left: 3px solid transparent;
-    user-select: none;
-  }
-  .sidebar-item:hover { background: var(--sidebar-hover); }
-  .sidebar-item.active {
-    background: var(--sidebar-active);
-    border-left-color: var(--sidebar-accent);
-    color: #fff;
-  }
-  .sidebar-item .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .sidebar-item .count {
-    margin-left: auto;
-    font-size: 11px;
-    background: rgba(255,255,255,0.08);
-    color: var(--sidebar-text);
-    padding: 1px 7px;
-    border-radius: 10px;
-  }
-
-  /* ── ノート一覧 ── */
   #notelist {
-    width: var(--list-width);
-    background: #fff;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-  }
-
-  .notelist-header {
-    padding: 16px 16px 10px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .notelist-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .btn-new {
-    background: var(--sidebar-accent);
-    color: #fff;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .btn-new:hover { opacity: 0.85; }
-
-  .note-search {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .note-search input {
     width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 12.5px;
-    font-family: inherit;
-    outline: none;
-    background: var(--bg);
-    color: var(--text);
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    transition: transform 0.25s ease;
   }
-  .note-search input:focus { border-color: var(--sidebar-active); }
-
-  #note-items { overflow-y: auto; flex: 1; }
-
-  .note-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.12s;
-    position: relative;
+  #notelist.hidden {
+    transform: translateX(-100%);
+    pointer-events: none;
   }
-  .note-item:hover { background: #f9f9fb; }
-  .note-item.active { background: #eef3fb; }
-  .note-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .note-item-tag {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 10px;
-    letter-spacing: 0.05em;
-  }
-  .note-item-title { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .note-item-preview { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .note-item-date { font-size: 10.5px; color: var(--text-muted); margin-top: 5px; }
-  .note-item-tasks { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-  .task-progress { display: flex; align-items: center; gap: 6px; }
-  .progress-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
-  /* ── エディタ ── */
   #editor-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .editor-toolbar {
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff;
-  }
-  .editor-notebook-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 12px;
-    letter-spacing: 0.05em;
-  }
-  .editor-title-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text);
-    background: transparent;
-  }
-  .editor-title-input::placeholder { color: #ccc; }
-  .btn-delete {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn-delete:hover { border-color: var(--sidebar-accent); color: var(--sidebar-accent); }
-
-  #editor-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
     background: var(--bg);
   }
-
-  .editor-section {
-    background: #fff;
-    border-radius: 10px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-  }
-  .editor-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 12px;
+  #editor-pane.visible {
+    transform: translateX(0);
   }
 
-  #note-content {
-    width: 100%;
-    border: none;
-    outline: none;
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 14px;
-    line-height: 1.8;
-    color: var(--text);
-    resize: none;
-    min-height: 120px;
-    background: transparent;
-  }
-
-  .task-list { list-style: none; }
-  .task-list li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid #f0f1f3;
-  }
-  .task-list li:last-child { border-bottom: none; }
-  .task-check {
-    width: 18px; height: 18px;
-    border: 2px solid var(--border);
-    border-radius: 50%;
-    cursor: pointer;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .task-check.done { background: #4caf50; border-color: #4caf50; }
-  .task-check.done::after { content: '✓'; color: #fff; font-size: 11px; }
-  .task-text {
-    flex: 1;
-    font-size: 13.5px;
-    color: var(--text);
-    border: none;
-    outline: none;
-    font-family: inherit;
-    background: transparent;
-    padding: 2px 0;
-  }
-  .task-text.done-text { text-decoration: line-through; color: var(--text-muted); }
-
-  .task-due {
-    font-size: 11px;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--tag-bg);
-    white-space: nowrap;
-  }
-  .task-due.overdue { color: #e94560; background: #fdeef1; }
-
-  .task-priority {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .task-delete-btn {
-    background: none;
-    border: none;
-    color: #ddd;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 0 4px;
-    line-height: 1;
-    transition: color 0.15s;
-  }
-  .task-delete-btn:hover { color: var(--sidebar-accent); }
-
-  .add-task-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0 0;
-    border-top: 1px solid #f0f1f3;
-    margin-top: 4px;
-  }
-  .add-task-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-family: inherit;
-    font-size: 13.5px;
-    color: var(--text-muted);
-    background: transparent;
-  }
-  .add-task-input::placeholder { color: #ccc; }
-  .btn-add-task {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: #ccc;
-    cursor: pointer;
-    line-height: 1;
-    transition: color 0.15s;
-  }
-  .btn-add-task:hover { color: var(--sidebar-accent); }
-
-  /* ── 空状態 ── */
-  #empty-state {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    color: var(--text-muted);
-    font-size: 14px;
-    background: var(--bg);
-  }
-  #empty-state .big { font-size: 48px; }
-
-  /* ── カラーコーディング ── */
-  .nb-gakudo  { --nb-color: var(--accent-gakudo); }
-  .nb-takkyuu { --nb-color: var(--accent-takkyuu); }
-  .nb-vector  { --nb-color: var(--accent-vector); }
-
-  .tag-gakudo  { background: #fff3e0; color: #bf6000; }
-  .tag-takkyuu { background: #e8f5e9; color: #2e7d32; }
-  .tag-vector  { background: #e1f5fe; color: #0277bd; }
+  .editor-back-btn { display: block; }
+  #app { position: relative; overflow: hidden; }
+}
 </style>
 </head>
 <body>
+<div id="app">
 
-<!-- サイドバー -->
-<nav id="sidebar">
-  <div class="sidebar-logo">My<span>Note</span></div>
+  <!-- オーバーレイ -->
+  <div id="overlay" onclick="closeSidebar()"></div>
 
-  <div class="sidebar-section-label">すべて</div>
-  <div class="sidebar-item active" data-nb="all" onclick="selectNotebook('all', this)">
-    <span>📋</span> すべてのノート
-    <span class="count" id="count-all">0</span>
-  </div>
-
-  <div class="sidebar-section-label">🏠 プライベート</div>
-  <div class="sidebar-item" data-nb="gakudo" onclick="selectNotebook('gakudo', this)">
-    <span class="dot" style="background:var(--accent-gakudo)"></span> 学童の仕事
-    <span class="count" id="count-gakudo">0</span>
-  </div>
-  <div class="sidebar-item" data-nb="takkyuu" onclick="selectNotebook('takkyuu', this)">
-    <span class="dot" style="background:var(--accent-takkyuu)"></span> 卓球の練習
-    <span class="count" id="count-takkyuu">0</span>
-  </div>
-
-  <div class="sidebar-section-label">💼 仕事</div>
-  <div class="sidebar-item" data-nb="vector" onclick="selectNotebook('vector', this)">
-    <span class="dot" style="background:var(--accent-vector)"></span> ベクトル
-    <span class="count" id="count-vector">0</span>
-  </div>
-</nav>
-
-<!-- ノート一覧 -->
-<div id="notelist">
-  <div class="notelist-header">
-    <span class="notelist-title" id="list-title">すべてのノート</span>
-    <button class="btn-new" onclick="createNote()">＋ 新規</button>
-  </div>
-  <div class="note-search">
-    <input type="text" id="search-input" placeholder="🔍 検索..." oninput="renderList()">
-  </div>
-  <div id="note-items"></div>
-</div>
-
-<!-- エディタ -->
-<div id="editor-pane">
-  <div id="empty-state">
-    <div class="big">📝</div>
-    <div>ノートを選択するか、新規作成してください</div>
-  </div>
-  <div id="editor-content" style="display:none; flex-direction:column; height:100%">
-    <div class="editor-toolbar">
-      <span class="editor-notebook-badge" id="editor-nb-badge"></span>
-      <input class="editor-title-input" id="editor-title" placeholder="タイトル" oninput="saveNote()">
-      <button class="btn-delete" onclick="deleteNote()">削除</button>
+  <!-- サイドバー -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-text">una-<span>task</span></span>
+      <button class="sidebar-close" onclick="closeSidebar()">✕</button>
     </div>
-    <div id="editor-body">
-      <div class="editor-section">
-        <div class="editor-section-title">メモ</div>
-        <textarea id="note-content" rows="5" placeholder="ここにメモを書く..." oninput="saveNote(); autoResize(this)"></textarea>
+
+    <div class="sidebar-section-label">すべて</div>
+    <div class="sidebar-item active" data-nb="all" onclick="selectNotebook('all', this)">
+      <span>📋</span> すべてのノート
+      <span class="count" id="count-all">0</span>
+    </div>
+
+    <div class="sidebar-section-label">🏠 プライベート</div>
+    <div class="sidebar-item" data-nb="gakudo" onclick="selectNotebook('gakudo', this)">
+      <span class="dot" style="background:var(--accent-gakudo)"></span> 学童の仕事
+      <span class="count" id="count-gakudo">0</span>
+    </div>
+    <div class="sidebar-item" data-nb="takkyuu" onclick="selectNotebook('takkyuu', this)">
+      <span class="dot" style="background:var(--accent-takkyuu)"></span> 卓球の練習
+      <span class="count" id="count-takkyuu">0</span>
+    </div>
+
+    <div class="sidebar-section-label">💼 仕事</div>
+    <div class="sidebar-item" data-nb="vector" onclick="selectNotebook('vector', this)">
+      <span class="dot" style="background:var(--accent-vector)"></span> ベクトル
+      <span class="count" id="count-vector">0</span>
+    </div>
+  </nav>
+
+  <!-- ノート一覧 -->
+  <div id="notelist">
+    <div class="notelist-header">
+      <button class="notelist-menu-btn" onclick="openSidebar()">☰</button>
+      <span class="notelist-title" id="list-title">すべてのノート</span>
+      <button class="btn-new" onclick="createNote()">＋ 新規</button>
+    </div>
+    <div class="note-search">
+      <input type="text" id="search-input" placeholder="🔍 検索..." oninput="renderList()">
+    </div>
+    <div id="note-items"></div>
+  </div>
+
+  <!-- エディタ -->
+  <div id="editor-pane">
+    <div id="empty-state">
+      <div class="big">📝</div>
+      <div>ノートを選択するか、新規作成してください</div>
+    </div>
+    <div id="editor-content" style="display:none; flex-direction:column; height:100%">
+      <div class="editor-toolbar">
+        <button class="editor-back-btn" onclick="backToList()">‹</button>
+        <span class="editor-notebook-badge" id="editor-nb-badge"></span>
+        <input class="editor-title-input" id="editor-title" placeholder="タイトル" oninput="saveNote()">
+        <button class="btn-delete" onclick="deleteNote()">削除</button>
       </div>
-      <div class="editor-section">
-        <div class="editor-section-title">タスク</div>
-        <ul class="task-list" id="task-list"></ul>
-        <div class="add-task-row">
-          <span style="color:#ccc;font-size:18px">＋</span>
-          <input class="add-task-input" id="new-task-input" placeholder="タスクを追加..." onkeydown="handleTaskInput(event)">
-          <button class="btn-add-task" onclick="addTask()" title="追加">↵</button>
+      <div id="editor-body">
+        <div class="editor-section">
+          <div class="editor-section-title">メモ</div>
+          <textarea id="note-content" rows="4" placeholder="ここにメモを書く..." oninput="saveNote(); autoResize(this)"></textarea>
+        </div>
+        <div class="editor-section">
+          <div class="editor-section-title">タスク</div>
+          <ul class="task-list" id="task-list"></ul>
+          <div class="add-task-row">
+            <span style="color:#ccc;font-size:18px">＋</span>
+            <input class="add-task-input" id="new-task-input" placeholder="タスクを追加..." onkeydown="handleTaskInput(event)">
+            <button class="btn-add-task" onclick="addTask()">↵</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
+</div>
 <script>
 const NB_META = {
-  all:     { label: 'すべて',    tagClass: '',          color: '#888' },
+  all:     { label: 'すべて',    tagClass: '',            color: '#888' },
   gakudo:  { label: '学童の仕事', tagClass: 'tag-gakudo',  color: '#ff9a3c' },
-  takkyuu: { label: '卓球の練習', tagClass: 'tag-takkyuu', color: '#a8e6cf' },
+  takkyuu: { label: '卓球の練習', tagClass: 'tag-takkyuu', color: '#52b788' },
   vector:  { label: 'ベクトル',  tagClass: 'tag-vector',  color: '#4fc3f7' },
 };
 
-let notes = JSON.parse(localStorage.getItem('mynote_notes') || '[]');
+let notes = JSON.parse(localStorage.getItem('unatask_notes') || '[]');
 let currentNb = 'all';
 let currentId = null;
+const isMobile = () => window.innerWidth <= 768;
 
+// ── サイドバー開閉 ──
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── スマホ: 一覧→エディタ遷移 ──
+function showEditorMobile() {
+  if (!isMobile()) return;
+  document.getElementById('notelist').classList.add('hidden');
+  document.getElementById('editor-pane').classList.add('visible');
+}
+function backToList() {
+  document.getElementById('notelist').classList.remove('hidden');
+  document.getElementById('editor-pane').classList.remove('visible');
+}
+
+// ── データ ──
 function save() {
-  localStorage.setItem('mynote_notes', JSON.stringify(notes));
+  localStorage.setItem('unatask_notes', JSON.stringify(notes));
   updateCounts();
   renderList();
 }
 
 function updateCounts() {
-  const nbs = ['gakudo','takkyuu','vector'];
   document.getElementById('count-all').textContent = notes.length;
-  nbs.forEach(nb => {
+  ['gakudo','takkyuu','vector'].forEach(nb => {
     document.getElementById('count-' + nb).textContent = notes.filter(n => n.nb === nb).length;
   });
 }
@@ -485,6 +609,8 @@ function selectNotebook(nb, el) {
   currentId = null;
   showEditor(false);
   renderList();
+  closeSidebar();
+  if (isMobile()) backToList();
 }
 
 function filteredNotes() {
@@ -512,11 +638,11 @@ function renderList() {
       <div class="note-item-header">
         <span class="note-item-tag ${meta.tagClass}">${meta.label}</span>
       </div>
-      <div class="note-item-title">${n.title || '無題'}</div>
-      <div class="note-item-preview">${n.content || 'メモなし'}</div>
-      ${total > 0 ? `<div class="task-progress" style="margin-top:6px">
+      <div class="note-item-title">${escHtml(n.title) || '無題'}</div>
+      <div class="note-item-preview">${escHtml(n.content) || 'メモなし'}</div>
+      ${total > 0 ? `<div class="task-progress">
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${meta.color}"></div></div>
-        <span style="font-size:10px;color:var(--text-muted)">${done}/${total}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${done}/${total}</span>
       </div>` : ''}
       <div class="note-item-date">${fmtDate(n.updatedAt)}</div>
     `;
@@ -540,24 +666,20 @@ function openNote(id) {
   autoResize(ta);
   renderTasks();
   renderList();
+  if (isMobile()) showEditorMobile();
 }
 
 function showEditor(show) {
   document.getElementById('empty-state').style.display = show ? 'none' : 'flex';
-  const ec = document.getElementById('editor-content');
-  ec.style.display = show ? 'flex' : 'none';
+  document.getElementById('editor-content').style.display = show ? 'flex' : 'none';
 }
 
 function createNote() {
   const nb = currentNb === 'all' ? 'gakudo' : currentNb;
   const n = {
-    id: Date.now().toString(),
-    nb,
-    title: '',
-    content: '',
-    tasks: [],
-    updatedAt: Date.now(),
-    createdAt: Date.now(),
+    id: Date.now().toString(), nb,
+    title: '', content: '', tasks: [],
+    updatedAt: Date.now(), createdAt: Date.now(),
   };
   notes.unshift(n);
   currentId = n.id;
@@ -582,6 +704,7 @@ function deleteNote() {
   currentId = null;
   save();
   showEditor(false);
+  if (isMobile()) backToList();
 }
 
 function renderTasks() {
@@ -592,10 +715,9 @@ function renderTasks() {
   n.tasks.forEach((t, i) => {
     const li = document.createElement('li');
     li.innerHTML = `
-      <span class="task-priority" style="background:${priorityColor(t.priority)}"></span>
       <div class="task-check ${t.done?'done':''}" onclick="toggleTask(${i})"></div>
       <input class="task-text ${t.done?'done-text':''}" value="${escHtml(t.text)}" oninput="updateTaskText(${i}, this.value)">
-      <span class="task-due ${isDue(t.due)?'overdue':''}" onclick="setDue(${i})">${t.due || '期限'}</span>
+      <span class="task-due" onclick="setDue(${i})">${t.due || '期限'}</span>
       <button class="task-delete-btn" onclick="removeTask(${i})">×</button>
     `;
     ul.appendChild(li);
@@ -606,29 +728,21 @@ function toggleTask(i) {
   const n = notes.find(x => x.id === currentId);
   n.tasks[i].done = !n.tasks[i].done;
   n.updatedAt = Date.now();
-  save();
-  renderTasks();
+  save(); renderTasks();
 }
-
 function updateTaskText(i, val) {
   const n = notes.find(x => x.id === currentId);
   n.tasks[i].text = val;
   n.updatedAt = Date.now();
   save();
 }
-
 function removeTask(i) {
   const n = notes.find(x => x.id === currentId);
   n.tasks.splice(i, 1);
   n.updatedAt = Date.now();
-  save();
-  renderTasks();
+  save(); renderTasks();
 }
-
-function handleTaskInput(e) {
-  if (e.key === 'Enter') addTask();
-}
-
+function handleTaskInput(e) { if (e.key === 'Enter') addTask(); }
 function addTask() {
   const input = document.getElementById('new-task-input');
   const text = input.value.trim();
@@ -637,78 +751,55 @@ function addTask() {
   n.tasks.push({ text, done: false, due: '', priority: 'normal' });
   n.updatedAt = Date.now();
   input.value = '';
-  save();
-  renderTasks();
+  save(); renderTasks();
 }
-
 function setDue(i) {
   const val = prompt('期限日を入力 (例: 6/15)', '');
   if (val === null) return;
   const n = notes.find(x => x.id === currentId);
   n.tasks[i].due = val;
   n.updatedAt = Date.now();
-  save();
-  renderTasks();
-}
-
-function priorityColor(p) {
-  return p === 'high' ? '#e94560' : p === 'low' ? '#a8e6cf' : '#e0e0e0';
-}
-
-function isDue(due) {
-  if (!due) return false;
-  return false; // 簡易実装
+  save(); renderTasks();
 }
 
 function fmtDate(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-
 function escHtml(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = el.scrollHeight + 'px';
 }
 
-// サンプルデータ
+// サンプルデータ（既存データがなければ挿入）
 function initSample() {
   if (notes.length > 0) return;
   const now = Date.now();
   notes = [
-    {
-      id: '1', nb: 'gakudo', title: '6月の行事準備',
-      content: '夏祭りに向けた準備リスト。保護者への連絡は6/10まで。',
-      tasks: [
-        { text: '保護者へのお知らせ作成', done: true, due: '6/10', priority: 'high' },
-        { text: '備品チェック（水鉄砲・輪投げ）', done: false, due: '6/20', priority: 'normal' },
-        { text: '当日シフト確認', done: false, due: '6/25', priority: 'normal' },
-      ],
-      updatedAt: now - 3600000, createdAt: now - 86400000,
-    },
-    {
-      id: '2', nb: 'takkyuu', title: '週間練習メニュー',
-      content: '火・木 19:00〜21:00 体育館\nサーブ練習に重点を置く。',
-      tasks: [
-        { text: 'フォアハンドドライブ 100球', done: false, due: '', priority: 'normal' },
-        { text: 'バックハンド練習', done: false, due: '', priority: 'normal' },
-        { text: 'サーブ種類を3種習得', done: true, due: '', priority: 'high' },
-      ],
-      updatedAt: now - 7200000, createdAt: now - 172800000,
-    },
-    {
-      id: '3', nb: 'vector', title: '6月タスク一覧',
-      content: '月次レポート・クライアント対応を優先。',
-      tasks: [
-        { text: '月次レポート作成', done: false, due: '6/28', priority: 'high' },
-        { text: '新規提案書レビュー', done: false, due: '6/15', priority: 'normal' },
-        { text: '週次ミーティング資料', done: true, due: '6/10', priority: 'normal' },
-      ],
-      updatedAt: now - 1800000, createdAt: now - 43200000,
-    },
+    { id:'1', nb:'gakudo', title:'6月の行事準備',
+      content:'夏祭りに向けた準備リスト。保護者への連絡は6/10まで。',
+      tasks:[
+        {text:'保護者へのお知らせ作成', done:true,  due:'6/10', priority:'high'},
+        {text:'備品チェック（水鉄砲・輪投げ）', done:false, due:'6/20', priority:'normal'},
+        {text:'当日シフト確認', done:false, due:'6/25', priority:'normal'},
+      ], updatedAt:now-3600000, createdAt:now-86400000 },
+    { id:'2', nb:'takkyuu', title:'週間練習メニュー',
+      content:'火・木 19:00〜21:00 体育館\nサーブ練習に重点を置く。',
+      tasks:[
+        {text:'フォアハンドドライブ 100球', done:false, due:'', priority:'normal'},
+        {text:'バックハンド練習', done:false, due:'', priority:'normal'},
+        {text:'サーブ種類を3種習得', done:true, due:'', priority:'high'},
+      ], updatedAt:now-7200000, createdAt:now-172800000 },
+    { id:'3', nb:'vector', title:'6月タスク一覧',
+      content:'月次レポート・クライアント対応を優先。',
+      tasks:[
+        {text:'月次レポート作成', done:false, due:'6/28', priority:'high'},
+        {text:'新規提案書レビュー', done:false, due:'6/15', priority:'normal'},
+        {text:'週次ミーティング資料', done:true, due:'6/10', priority:'normal'},
+      ], updatedAt:now-1800000, createdAt:now-43200000 },
   ];
   save();
 }
